@@ -3,11 +3,11 @@ import { getConnection, sql } from '@/lib/db';
 
 export async function GET(
   request: Request,
-  context: { params: { slug: string } }
+  props: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const params = await context.params; 
-    const slug = params?.slug;
+    const params = await props.params;
+    const { slug } = params;
 
     if (!slug) {
       return NextResponse.json({ error: 'El slug del negocio es obligatorio' }, { status: 400 });
