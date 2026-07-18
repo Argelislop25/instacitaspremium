@@ -1,31 +1,45 @@
 import { NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
-import sql from 'mssql';
+import { supabase } from '@/lib/supabase'; // Asegúrate de importar el cliente que creamos
 
-// src/app/api/citas-negocio/route.ts
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const negocioId = searchParams.get('negocioId');
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('negocioId', sql.UniqueIdentifier, negocioId)
-      .query(`
-        SELECT 
-          C.Id, C.NombreCliente, C.TelefonoCliente, C.EmailCliente, 
-          C.FechaHora, C.Estado,
-          S.Nombre AS NombreServicio,
-          P.Nombre AS NombreProfesional
-        FROM Citas C
-        LEFT JOIN Servicios S ON C.ServicioId = S.Id
-        LEFT JOIN Profesionales P ON C.ProfesionalId = P.Id
-        WHERE C.NegocioId = @negocioId 
-        ORDER BY C.FechaHora DESC
-      `);
+    if (!negocioId) {
+      return NextResponse.json({ error: 'negocioId es requerido' }, { status: 400 });
+    }
 
-    return NextResponse.json(result.recordset);
+    // Consulta equivalente a Supabase
+    const { data, error } = await supabase
+      .from('Citas')
+      .select(`
+        Id, 
+        NombreCliente, 
+        TelefonoCliente, 
+        EmailCliente, 
+        FechaHora, 
+        Estado,
+        Servicios (Nombre),
+        Profesionales (Nombre)
+      `)
+      .eq('negocio_id', negocioId)
+      .order('FechaHora', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    // Transformamos los datos para que coincidan con la estructura que espera tu frontend
+    const formattedData = data.map((cita: any) => ({
+      ...cita,
+      NombreServicio: cita.Servicios?.Nombre,
+      NombreProfesional: cita.Profesionales?.Nombre
+    }));
+
+    return NextResponse.json(formattedData);
   } catch (error) {
-    return NextResponse.json({ error: 'Error' }, { status: 500 });
+    console.error("Error en API de citas:", error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

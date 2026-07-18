@@ -28,29 +28,29 @@ function ContenidoReserva() {
   const [fecha, setFecha] = useState("");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
-  const [telefono, settelephone] = useState("");
+  const [telefono, setTelefono] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!servicioSeleccionado || !fecha || !horaSeleccionada) return;
 
-    // Obtenemos el ID real dinámicamente según el servicio seleccionado
     const idRealParaBaseDeDatos = MAPA_IDS_BASE_DATOS[servicioSeleccionado.id];
 
     try {
       const response = await fetch('/api/reservar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          NegocioId: '5B188BB1-99EC-44E1-B8B0-39BEA5887C1D',
-          ServicioId: idRealParaBaseDeDatos, // Ahora es dinámico
-          ProfesionalId: 'A1A1A1A1-B2B2-C3C3-D4D4-E5E5E5E5E5E5',
-          NombreCliente: nombre,
-          EmailCliente: email,
-          TelefonoCliente: telefono,
-          FechaHora: `${fecha}T${horaSeleccionada.replace(" AM", ":00").replace(" PM", ":00")}`
-        }),
+      body: JSON.stringify({
+        negocioid: '5B188BB1-99EC-44E1-B8B0-39BEA5887C1D',
+        servicioid: idRealParaBaseDeDatos,
+        // Usando el ID real que acabas de crear en Supabase
+        profesionalid: 'eff73c98-a808-414e-bb6d-2fd226114703', 
+        nombrecliente: nombre,
+        emailcliente: email,
+        telefonocliente: telefono,
+        fechahora: `${fecha}T${horaSeleccionada.replace(" AM", ":00").replace(" PM", ":00")}`
+      }),
       });
 
       if (response.ok) {
@@ -124,8 +124,16 @@ function ContenidoReserva() {
         </div>
         <div className="space-y-2">
           <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">Teléfono</label>
-          <input type="tel" required placeholder="Ej. 514-000-0000" value={telefono} onChange={(e) => settelephone(e.target.value)} className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-700 transition-colors" />
+          <input type="tel" required placeholder="Ej. 514-000-0000" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-700 transition-colors" />
         </div>
+
+        {/* Resumen que faltaba */}
+        <div className="pt-4 border-t border-zinc-900 space-y-2 text-xs font-mono text-zinc-500">
+          <div className="flex justify-between"><span>Servicio:</span> <span className="text-white">{servicioSeleccionado?.name || 'No elegido'}</span></div>
+          <div className="flex justify-between"><span>Fecha:</span> <span className="text-white">{fecha || 'No seleccionada'}</span></div>
+          <div className="flex justify-between"><span>Hora:</span> <span className="text-white">{horaSeleccionada || 'No seleccionada'}</span></div>
+        </div>
+
         <button type="submit" disabled={!fecha || !horaSeleccionada} className="w-full py-3.5 bg-white text-zinc-950 font-medium rounded-xl hover:bg-zinc-200 transition-all duration-200 text-sm font-semibold disabled:opacity-20 disabled:hover:bg-white disabled:cursor-not-allowed text-center">
           Confirmar Cita
         </button>

@@ -1,40 +1,25 @@
-import sql from 'mssql';
 import { NextResponse } from 'next/server';
-
-const config: sql.config = {
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_DATABASE,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: true,
-    trustServerCertificate: true, // Ignora el certificado local
-    serverName: 'localhost'       // 👈 Agrega esta línea mágica para quitar el error de la IP
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
-  }
-};
+import { supabase } from '@/lib/supabase'; // Asegúrate de importar el cliente aquí
 
 export async function GET() {
   try {
-    // Conectamos usando tu configuración
-    const pool = await sql.connect(config);
+    // Obtenemos la fecha actual en formato ISO para comparar
+    const ahora = new Date().toISOString();
     
-    // Hacemos la consulta
-const result = await pool.request().query(`
-  SELECT * FROM dbo.Citas 
-  WHERE FechaHora >= GETDATE() 
-  ORDER BY FechaHora ASC
-`);
-    // Cerramos la conexión
-    pool.close();
+    // Consulta a Supabase
+    const { data, error } = await supabase
+      .from('citas')
+      .select('*')
+      .gte('fechahora', ahora)
+      .order('fechahora', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
     
-    return NextResponse.json(result.recordset);
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("Error al obtener citas:", error);
+    console.error("Error al obtener citas en Supabase:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

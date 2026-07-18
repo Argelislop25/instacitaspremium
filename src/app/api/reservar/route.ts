@@ -1,37 +1,37 @@
 import { NextResponse } from 'next/server';
-import { getConnection, sql } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
 
-// 1. GET /api/reservar?negocioId=...
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// 1. GET /api/reservar?negocioid=...
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const negocioId = searchParams.get('negocioId');
+    const negocioid = searchParams.get('negocioid');
 
-    if (!negocioId) {
-      return NextResponse.json(
-        { error: 'El parámetro negocioId es obligatorio' },
-        { status: 400 }
-      );
+    if (!negocioid) {
+      return NextResponse.json({ error: 'El parámetro negocioid es obligatorio' }, { status: 400 });
     }
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('NegocioId', sql.UniqueIdentifier, negocioId)
-      .query(`
-        SELECT c.*, s.Nombre AS ServicioNombre, s.Precio, s.DuracionMinutos 
-        FROM Citas c
-        INNER JOIN Servicios s ON c.ServicioId = s.Id
-        WHERE c.NegocioId = @NegocioId 
-        ORDER BY c.FechaHora ASC
-      `);
+    const { data, error } = await supabase
+      .from('citas')
+      .select(`
+        *,
+        servicios:servicioid (
+          nombre,
+          precio
+        )
+      `)
+      .eq('negocioid', negocioid)
+      .order('fechahora', { ascending: true });
 
-    return NextResponse.json(result.recordset);
+    if (error) throw error;
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('❌ Error en GET /api/reservar:', error);
-    return NextResponse.json(
-      { error: 'Error al obtener las citas' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error al obtener las citas' }, { status: 500 });
   }
 }
 
@@ -39,39 +39,30 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { NegocioId, ServicioId, ProfesionalId, NombreCliente, EmailCliente, TelefonoCliente, FechaHora } = body;
+    const { negocioid, servicioid, profesionalid, nombrecliente, emailcliente, telefonocliente, fechahora } = body;
 
-    // Validamos que todos los campos requeridos estén presentes
-    if (!NegocioId || !ServicioId || !ProfesionalId || !NombreCliente || !TelefonoCliente || !FechaHora) {
-      return NextResponse.json(
-        { error: 'Todos los campos excepto el email son obligatorios' },
-        { status: 400 }
-      );
+    // Validación según tus nombres de columna reales
+    if (!negocioid || !servicioid || !profesionalid || !nombrecliente || !telefonocliente || !fechahora) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
     }
 
-    const fechaFormateada = new Date(FechaHora);
+    const { data, error } = await supabase
+      .from('citas')
+      .insert([{
+        negocioid,
+        servicioid,
+        profesionalid,
+        nombrecliente,
+        emailcliente: emailcliente || null,
+        telefonocliente,
+        fechahora
+      }])
+      .select();
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('NegocioId', sql.UniqueIdentifier, NegocioId)
-      .input('ServicioId', sql.UniqueIdentifier, ServicioId)
-      .input('ProfesionalId', sql.UniqueIdentifier, ProfesionalId)
-      .input('NombreCliente', sql.NVarChar, NombreCliente)
-      .input('EmailCliente', sql.NVarChar, EmailCliente || null)
-      .input('TelefonoCliente', sql.NVarChar, TelefonoCliente)
-      .input('FechaHora', sql.DateTime2, fechaFormateada)
-      .query(`
-        INSERT INTO Citas (NegocioId, ServicioId, ProfesionalId, NombreCliente, EmailCliente, TelefonoCliente, FechaHora)
-        OUTPUT INSERTED.*
-        VALUES (@NegocioId, @ServicioId, @ProfesionalId, @NombreCliente, @EmailCliente, @TelefonoCliente, @FechaHora)
-      `);
-
-    return NextResponse.json(result.recordset[0], { status: 201 });
+    if (error) throw error;
+    return NextResponse.json(data[0], { status: 201 });
   } catch (error) {
-    console.error('❌ Error en POST /api/reservar:', error);
-    return NextResponse.json(
-      { error: 'Error interno al agendar la cita' },
-      { status: 500 }
-    );
+    console.error('❌ Error:', error);
+    return NextResponse.json({ error: 'Error interno al agendar' }, { status: 500 });
   }
 }
