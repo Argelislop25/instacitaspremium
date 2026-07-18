@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getConnection, sql } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // 1. GET /api/servicios?negocioId=...
 export async function GET(request: Request) {
@@ -14,12 +19,15 @@ export async function GET(request: Request) {
       );
     }
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('NegocioId', sql.UniqueIdentifier, negocioId)
-      .query('SELECT * FROM Servicios WHERE NegocioId = @NegocioId ORDER BY FechaCreacion DESC');
+    const { data, error } = await supabase
+      .from('servicios')
+      .select('*')
+      .eq('negocioid', negocioId)
+      .order('fechacreacion', { ascending: false });
 
-    return NextResponse.json(result.recordset);
+    if (error) throw error;
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error('❌ Error en GET /api/servicios:', error);
     return NextResponse.json(
@@ -42,20 +50,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('NegocioId', sql.UniqueIdentifier, NegocioId)
-      .input('Nombre', sql.NVarChar, Nombre)
-      .input('Descripcion', sql.NVarChar, Descripcion || null)
-      .input('Precio', sql.Decimal(10, 2), Precio)
-      .input('DuracionMinutos', sql.Int, DuracionMinutos || 30)
-      .query(`
-        INSERT INTO Servicios (NegocioId, Nombre, Descripcion, Precio, DuracionMinutos)
-        OUTPUT INSERTED.*
-        VALUES (@NegocioId, @Nombre, @Descripcion, @Precio, @DuracionMinutos)
-      `);
+    const { data, error } = await supabase
+      .from('servicios')
+      .insert([{
+        negocioid: NegocioId,
+        nombre: Nombre,
+        descripcion: Descripcion,
+        precio: Precio,
+        duracionminutos: DuracionMinutos || 30
+      }])
+      .select()
+      .single();
 
-    return NextResponse.json(result.recordset[0], { status: 201 });
+    if (error) throw error;
+
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('❌ Error en POST /api/servicios:', error);
     return NextResponse.json(

@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getConnection, sql } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(
   request: Request,
@@ -13,16 +18,17 @@ export async function GET(
       return NextResponse.json({ error: 'El slug del negocio es obligatorio' }, { status: 400 });
     }
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('Slug', sql.NVarChar, slug)
-      .query('SELECT * FROM Negocios WHERE Slug = @Slug');
+    const { data, error } = await supabase
+      .from('negocios')
+      .select('*')
+      .eq('slug', slug)
+      .single();
 
-    if (result.recordset.length === 0) {
+    if (error || !data) {
       return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(result.recordset[0]);
+    return NextResponse.json(data);
   } catch (error) {
     console.error(`❌ Error en GET /api/negocios/[slug]:`, error);
     return NextResponse.json({ error: 'Error interno al obtener el negocio' }, { status: 500 });

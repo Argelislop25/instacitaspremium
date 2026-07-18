@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getConnection, sql } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// 1. GET /api/negocios
 export async function GET() {
   try {
-    const pool = await getConnection();
-    const result = await pool.request().query('SELECT * FROM Negocios ORDER BY FechaCreacion DESC');
-    return NextResponse.json(result.recordset);
+    const { data, error } = await supabase
+      .from('negocios')
+      .select('*')
+      .order('fechacreacion', { ascending: false });
+
+    if (error) throw error;
+    return NextResponse.json(data);
   } catch (error) {
     console.error('❌ Error en GET /api/negocios:', error);
     return NextResponse.json(
@@ -15,6 +25,7 @@ export async function GET() {
   }
 }
 
+// 2. POST /api/negocios
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -33,24 +44,28 @@ export async function POST(request: Request) {
       .replace(/[\s_]+/g, '-')
       .replace(/-+/g, '-');
 
-    const pool = await getConnection();
-    const result = await pool.request()
-      .input('Nombre', sql.NVarChar, Nombre)
-      .input('Slug', sql.NVarChar, Slug)
-      .input('Telefono', sql.NVarChar, Telefono || null)
-      .input('LogoUrl', sql.NVarChar, LogoUrl || null)
-      .query(`
-        INSERT INTO Negocios (Nombre, Slug, Telefono, LogoUrl)
-        OUTPUT INSERTED.*
-        VALUES (@Nombre, @Slug, @Telefono, @LogoUrl)
-      `);
+    const { data, error } = await supabase
+      .from('negocios')
+      .insert([{
+        nombre: Nombre,
+        slug: Slug,
+        telefono: Telefono || null,
+        logourl: LogoUrl || null
+      }])
+      .select()
+      .single();
 
-    return NextResponse.json(result.recordset[0], { status: 201 });
+    if (error) {
+      // Error 23505 es el código de Supabase/Postgres para violación de unicidad (duplicados)
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'Ya existe un negocio registrado con ese nombre o slug' }, { status: 400 });
+      }
+      throw error;
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (error: any) {
     console.error('❌ Error en POST /api/negocios:', error);
-    if (error.number === 2627 || error.number === 2601) {
-      return NextResponse.json({ error: 'Ya existe un negocio registrado con ese nombre' }, { status: 400 });
-    }
     return NextResponse.json({ error: 'Error interno al intentar crear el negocio' }, { status: 500 });
   }
 }
