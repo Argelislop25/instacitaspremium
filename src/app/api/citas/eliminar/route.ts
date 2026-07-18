@@ -1,32 +1,25 @@
-import { NextResponse } from 'next/server';
-import sql from 'mssql';
 
-// Copia aquí exactamente el mismo objeto 'config' que tienes en tu otro archivo route.ts
-const config = {
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_DATABASE,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: true,
-    trustServerCertificate: true,
-    serverName: 'localhost'
-  }
-};
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializamos el cliente de Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: Request) {
   try {
-    const { id } = await request.json(); // Recibe el ID desde el frontend
-    
-    const pool = await sql.connect(config);
-    
-    // Ejecutamos el DELETE
-    await pool.request()
-      .input('id', sql.UniqueIdentifier, id) // Aseguramos que el ID sea correcto
-      .query('DELETE FROM dbo.Citas WHERE Id = @id');
-      
-    pool.close();
-    
+    const { id } = await request.json(); // Recibimos el ID desde el frontend
+
+    // Ejecutamos el DELETE en Supabase
+    const { error } = await supabase
+      .from('citas')
+      .delete()
+      .eq('id', id); // 'id' debe coincidir con la columna en tu tabla de Supabase
+
+    if (error) throw error;
+
     return NextResponse.json({ message: "Cita eliminada con éxito" });
   } catch (error) {
     console.error("Error al eliminar la cita:", error);

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
-import sql from 'mssql';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,22 +12,27 @@ export async function GET(request: Request) {
   const fecha = searchParams.get('fecha');
 
   try {
-    const pool = await getConnection();
-    
-    // Convertimos la hora de la DB al formato de tus botones: "08:00 PM"
-    const result = await pool.request()
-      .input('ProfesionalId', sql.UniqueIdentifier, profesionalId)
-      .input('Fecha', sql.Date, fecha)
-      .query(`
-        SELECT FORMAT(FechaHora, 'hh:mm tt') as Hora 
-        FROM Citas 
-        WHERE ProfesionalId = @ProfesionalId 
-        AND CAST(FechaHora AS DATE) = @Fecha
-        AND Estado != 'Cancelada'
-      `)
+    // Buscamos las citas en Supabase
+    const { data, error } = await supabase
+      .from('citas')
+      .select('fechahora') // Traemos solo la columna de fecha y hora
+      .eq('profesionalid', profesionalId) // Asegúrate que el nombre de columna en tu DB sea este
+      .gte('fechahora', `${fecha}T00:00:00`)
+      .lte('fechahora', `${fecha}T23:59:59`)
+      .neq('estado', 'Cancelada');
 
-    // Devolvemos un array simple como ["08:00 PM", "03:00 PM"]
-    return NextResponse.json(result.recordset.map(r => r.Hora));
+    if (error) throw error;
+
+    // Formateamos las horas igual que antes (HH:MM AM/PM)
+    const horasFormateadas = data.map(c => {
+      return new Date(c.fechahora).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    });
+
+    return NextResponse.json(horasFormateadas);
   } catch (error) {
     console.error("Error al buscar citas:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

@@ -1,35 +1,29 @@
 import { NextResponse } from 'next/server';
-import sql from 'mssql';
+import { createClient } from '@supabase/supabase-js';
 
-const dbConfig = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_DATABASE,
-  options: {
-    encrypt: false, // Cambia a true si estás en Azure
-    trustServerCertificate: true,
-  },
-};
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   const { clave } = await req.json();
 
   try {
-    const pool = await sql.connect(dbConfig);
-    
-    const result = await pool.request()
-      .input('clave', sql.NVarChar, clave)
-      .query('SELECT Id FROM Negocios WHERE ClaveAdmin = @clave');
+    // Buscamos el negocio que coincida con la clave
+    const { data, error } = await supabase
+      .from('negocios') // Asegúrate de que tu tabla se llame 'negocios'
+      .select('id')
+      .eq('claveadmin', clave) // Asegúrate de que tu columna sea 'claveadmin'
+      .single();
 
-    if (result.recordset.length > 0) {
-      return NextResponse.json({ negocioId: result.recordset[0].Id }, { status: 200 });
-    } else {
+    if (error || !data) {
       return NextResponse.json({ error: 'Clave no válida' }, { status: 401 });
     }
-  } catch (error) {
-    console.error('Error de conexión:', error);
-    return NextResponse.json({ error: 'Error en servidor' }, { status: 500 });
-  }  
 
+    return NextResponse.json({ negocioId: data.id }, { status: 200 });
+  } catch (error) {
+    console.error('Error al validar clave:', error);
+    return NextResponse.json({ error: 'Error en servidor' }, { status: 500 });
+  }
 }
