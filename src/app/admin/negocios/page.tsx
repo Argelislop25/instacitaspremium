@@ -22,7 +22,7 @@ export default function LoginAdmin() {
       localStorage.setItem('negocioId', data.negocioId);
       
       // REDIRECCIÓN CORREGIDA PARA TU ESTRUCTURA DE CARPETAS
-      router.push('/admin/negocios/dashboard');
+      router.push('/admin/negocios_id/dashboard');
     } else {
       alert("Clave incorrecta");
     }

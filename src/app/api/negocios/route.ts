@@ -10,14 +10,14 @@ const supabase = createClient(
 export async function GET() {
   try {
     const { data, error } = await supabase
-      .from('negocios')
+      .from('negocios_id')
       .select('*')
       .order('fechacreacion', { ascending: false });
 
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) {
-    console.error('❌ Error en GET /api/negocios:', error);
+    console.error('❌ Error en GET /api/negocios_id:', error);
     return NextResponse.json(
       { error: 'Error al obtener los negocios de la base de datos' },
       { status: 500 }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       .replace(/-+/g, '-');
 
     const { data, error } = await supabase
-      .from('negocios')
+      .from('negocios_id')
       .insert([{
         nombre: Nombre,
         slug: Slug,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data, { status: 201 });
   } catch (error: any) {
-    console.error('❌ Error en POST /api/negocios:', error);
+    console.error('❌ Error en POST /api/negocios_id:', error);
     return NextResponse.json({ error: 'Error interno al intentar crear el negocio' }, { status: 500 });
   }
 }

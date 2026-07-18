@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   try {
     // Buscamos el negocio que coincida con la clave
     const { data, error } = await supabase
-      .from('negocios') // Asegúrate de que tu tabla se llame 'negocios'
+      .from('negocios_id') // Asegúrate de que tu tabla se llame 'negocios'
       .select('id')
       .eq('claveadmin', clave) // Asegúrate de que tu columna sea 'claveadmin'
       .single();

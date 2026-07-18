@@ -7,33 +7,49 @@ export async function POST(request: Request) {
     const data = await request.json();
     console.log("--- 🕵️ Datos recibidos para insertar:", data);
 
-    // Lógica para convertir "02:00 PM" a formato ISO compatible con Supabase (YYYY-MM-DDTHH:mm:ssZ)
+    // Lógica para convertir "02:00 PM" a formato ISO
     const convertirAISO = (fecha: string, hora12: string) => {
       let [hora, minuto] = hora12.replace(' AM', '').replace(' PM', '').split(':');
       let h24 = parseInt(hora);
       if (hora12.includes('PM') && h24 !== 12) h24 += 12;
       if (hora12.includes('AM') && h24 === 12) h24 = 0;
-      
-      // Formato ISO esperado por Supabase: "2026-07-18T14:00:00"
       return `${fecha}T${String(h24).padStart(2, '0')}:${minuto}:00`;
     };
 
     const fechaHoraISO = convertirAISO(data.fecha, data.hora);
-    console.log("--- 📅 Fecha preparada para Supabase:", fechaHoraISO);
+    
+    // --- NUEVA VALIDACIÓN: Verificar disponibilidad ---
+    const { data: citaExistente, error: errorBusqueda } = await supabase
+      .from('citas')
+      .select('id')
+      .eq('profesionalid', data.ProfesionalId)
+      .eq('fechahora', fechaHoraISO)
+      .maybeSingle();
+
+    if (errorBusqueda) throw errorBusqueda;
+
+    if (citaExistente) {
+      console.log("--- ⚠️ Intento de cita en horario ocupado:", fechaHoraISO);
+      return NextResponse.json(
+        { error: 'Este barbero ya tiene una cita reservada en este horario.' }, 
+        { status: 409 } // Conflict
+      );
+    }
+    // ----------------------------------------------------
 
     // Inserción en Supabase
     const { error } = await supabase
-      .from('Citas')
+      .from('citas')
       .insert([
         {
-          NegocioId: data.NegocioId,
-          ServicioId: data.ServicioId,
-          ProfesionalId: data.ProfesionalId,
-          NombreCliente: data.NombreCliente,
-          EmailCliente: data.EmailCliente,
-          TelefonoCliente: data.TelefonoCliente,
-          FechaHora: fechaHoraISO,
-          Estado: 'Pendiente'
+          negocioid: data.NegocioId,
+          servicioid: data.ServicioId,
+          profesionalid: data.ProfesionalId,
+          nombrecliente: data.NombreCliente,
+          emailcliente: data.EmailCliente,
+          telefonocliente: data.TelefonoCliente,
+          fechahora: fechaHoraISO,
+          estado: 'Pendiente'
         }
       ]);
 

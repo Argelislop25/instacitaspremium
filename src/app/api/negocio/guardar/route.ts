@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     // 2. Insertamos usando el cliente de Supabase
     // Nota: Usamos 'negocios' en minúsculas y nombres de columnas también en minúsculas
     const { data, error } = await supabase
-      .from('negocios')
+      .from('negocios_id')
       .insert([
         {
           id: id,

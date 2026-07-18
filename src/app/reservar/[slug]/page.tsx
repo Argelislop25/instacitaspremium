@@ -10,7 +10,7 @@ const supabase = createClient(
 // Función refactorizada para obtener datos desde Supabase
 async function obtenerNegocio(slug: string) {
   const { data, error } = await supabase
-    .from('negocios')
+    .from('negocios_id')
     .select('*')
     .eq('slug', slug)
     .maybeSingle(); // Cambiado a maybeSingle para evitar error si no hay registros

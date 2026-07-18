@@ -14,7 +14,7 @@ export default function FormularioReserva({ negocioId }: { negocioId: string }) 
   const [telefono, setTelefono] = useState('');
   const [horasOcupadas, setHorasOcupadas] = useState<string[]>([]);
 
-  const ID_NEGOCIO_CORRECTO = '1A48F94D-6A2F-4589-A615-1DA1432D0A81';
+  const ID_NEGOCIO_CORRECTO = 'b61fbacb-cc89-4e3e-bf20-aba55f7ec86e';
 
   // Lógica para bloquear horas ocupadas
   useEffect(() => {
