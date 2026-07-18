@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+/*import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase'; // Asegúrate de importar el cliente que creamos
 
 export async function GET(request: Request) {
@@ -43,3 +43,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
+  */
