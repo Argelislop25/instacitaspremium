@@ -49,7 +49,7 @@ export default function FormularioReserva({ negocioId }: { negocioId: string }) 
     { id: "33140948-5AAB-48FB-AF8E-4033E2D0BDEA", nombre: "Barbero Disponible" }
   ];
 
-  const horarios = ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM", "10:00 PM"];
+  const horarios = ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM"];
 
   const manejarReserva = async () => {
   if (!fecha || !horario || !nombre || !telefono || !servicio || !barbero) {
